@@ -3,7 +3,7 @@
 """
 
 from logging import Logger
-from fastapi import Request
+from starlette.requests import Request
 
 
 def get_write_request_to_log(logger: Logger):

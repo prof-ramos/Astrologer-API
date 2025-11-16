@@ -1,13 +1,14 @@
 # External Libraries
-from fastapi import APIRouter, Request
-from fastapi.responses import JSONResponse
+from starlette.routing import Router, Route
+from starlette.responses import JSONResponse
+from starlette.requests import Request
 from logging import getLogger
 from kerykeion import (
-    AstrologicalSubject, 
-    KerykeionChartSVG, 
-    SynastryAspects, 
-    NatalAspects, 
-    RelationshipScoreFactory, 
+    AstrologicalSubject,
+    KerykeionChartSVG,
+    SynastryAspects,
+    NatalAspects,
+    RelationshipScoreFactory,
     CompositeSubjectFactory
 )
 from kerykeion.settings.config_constants import DEFAULT_ACTIVE_POINTS, DEFAULT_ACTIVE_ASPECTS
@@ -41,11 +42,8 @@ from ..types.response_models import (
 logger = getLogger(__name__)
 write_request_to_log = get_write_request_to_log(logger)
 
-router = APIRouter()
-
 GEONAMES_ERROR_MESSAGE = "City/Nation name error or invalid GeoNames username. Please check your username or city name and try again. You can create a free username here: https://www.geonames.org/login/. If you want to bypass the usage of GeoNames, please remove the geonames_username field from the request. Note: The nation field should be the country code (e.g. US, UK, FR, DE, etc.)."
 
-@router.get("/api/v4/health", response_description="Health check", include_in_schema=False)
 async def health(request: Request) -> JSONResponse:
     """
     Health check endpoint.
@@ -56,7 +54,6 @@ async def health(request: Request) -> JSONResponse:
     return JSONResponse(content={"status": "OK"}, status_code=200)
 
 
-@router.get("/", response_description="Status of the API", response_model=BirthDataResponseModel, include_in_schema=False)
 async def status(request: Request) -> JSONResponse:
     """
     Returns the status of the API.
@@ -74,7 +71,6 @@ async def status(request: Request) -> JSONResponse:
     return JSONResponse(content=response_dict, status_code=200)
 
 
-@router.get("/api/v4/now", response_description="Current astrological data", response_model=BirthDataResponseModel)
 async def get_now(request: Request) -> JSONResponse:
     """
     Retrieve astrological data for the current moment.
@@ -82,7 +78,7 @@ async def get_now(request: Request) -> JSONResponse:
 
     # Get current UTC time from the time API
     write_request_to_log(20, request, "Getting current astrological data")
-    
+
     logger.debug("Getting current UTC time from the time API")
     try:
         utc_datetime = get_time_from_google()
@@ -124,14 +120,16 @@ async def get_now(request: Request) -> JSONResponse:
         return InternalServerErrorJsonResponse
 
 
-@router.post("/api/v4/birth-data", response_description="Birth data", response_model=BirthDataResponseModel)
-async def birth_data(birth_data_request: BirthDataRequestModel, request: Request):
+async def birth_data(request: Request):
     """
     Retrieve astrological data for a specific birth date. Does not include the chart nor the aspects.
     """
 
     write_request_to_log(20, request, f"Birth data request")
 
+    # Parse JSON body
+    body = await request.json()
+    birth_data_request = BirthDataRequestModel(**body)
     subject = birth_data_request.subject
 
     try:
@@ -176,14 +174,16 @@ async def birth_data(birth_data_request: BirthDataRequestModel, request: Request
         return InternalServerErrorJsonResponse
 
 
-@router.post("/api/v4/birth-chart", response_description="Birth chart", response_model=BirthChartResponseModel)
-async def birth_chart(request_body: BirthChartRequestModel, request: Request):
+async def birth_chart(request: Request):
     """
     Retrieve an astrological birth chart for a specific birth date. Includes the data for the subject and the aspects.
     """
 
     write_request_to_log(20, request, f"Birth chart request")
 
+    # Parse JSON body
+    body = await request.json()
+    request_body = BirthChartRequestModel(**body)
     subject = request_body.subject
 
     try:
@@ -248,14 +248,16 @@ async def birth_chart(request_body: BirthChartRequestModel, request: Request):
         return InternalServerErrorJsonResponse
 
 
-@router.post("/api/v4/synastry-chart", response_description="Synastry data", response_model=SynastryChartResponseModel)
-async def synastry_chart(synastry_chart_request: SynastryChartRequestModel, request: Request):
+async def synastry_chart(request: Request):
     """
     Retrieve a synastry chart between two subjects. Includes the data for the subjects and the aspects.
     """
 
     write_request_to_log(20, request, f"Synastry chart request")
 
+    # Parse JSON body
+    body = await request.json()
+    synastry_chart_request = SynastryChartRequestModel(**body)
     first_subject = synastry_chart_request.first_subject
     second_subject = synastry_chart_request.second_subject
 
@@ -343,14 +345,16 @@ async def synastry_chart(synastry_chart_request: SynastryChartRequestModel, requ
         return InternalServerErrorJsonResponse
 
 
-@router.post("/api/v4/transit-chart", response_description="Transit data", response_model=TransitChartResponseModel)
-async def transit_chart(transit_chart_request: TransitChartRequestModel, request: Request):
+async def transit_chart(request: Request):
     """
     Retrieve a transit chart for a specific subject. Includes the data for the subject and the aspects.
     """
 
     write_request_to_log(20, request, f"Transit chart request")
 
+    # Parse JSON body
+    body = await request.json()
+    transit_chart_request = TransitChartRequestModel(**body)
     first_subject = transit_chart_request.first_subject
     second_subject = transit_chart_request.transit_subject
 
@@ -438,14 +442,16 @@ async def transit_chart(transit_chart_request: TransitChartRequestModel, request
         return InternalServerErrorJsonResponse
 
 
-@router.post("/api/v4/transit-aspects-data", response_description="Transit aspects data", response_model=TransitAspectsResponseModel)
-async def transit_aspects_data(transit_chart_request: TransitChartRequestModel, request: Request) -> JSONResponse:
+async def transit_aspects_data(request: Request) -> JSONResponse:
     """
     Retrieve transit aspects and data for a specific subject. Does not include the chart.
     """
 
     write_request_to_log(20, request, f"Transit aspects data request")
 
+    # Parse JSON body
+    body = await request.json()
+    transit_chart_request = TransitChartRequestModel(**body)
     first_subject = transit_chart_request.first_subject
     second_subject = transit_chart_request.transit_subject
 
@@ -524,14 +530,16 @@ async def transit_aspects_data(transit_chart_request: TransitChartRequestModel, 
         return InternalServerErrorJsonResponse
 
 
-@router.post("/api/v4/synastry-aspects-data", response_description="Synastry aspects data", response_model=SynastryAspectsResponseModel)
-async def synastry_aspects_data(aspects_request_content: SynastryAspectsRequestModel, request: Request) -> JSONResponse:
+async def synastry_aspects_data(request: Request) -> JSONResponse:
     """
     Retrieve synastry aspects between two subjects. Does not include the chart.
     """
 
     write_request_to_log(20, request, f"Synastry aspects data request")
 
+    # Parse JSON body
+    body = await request.json()
+    aspects_request_content = SynastryAspectsRequestModel(**body)
     first_subject = aspects_request_content.first_subject
     second_subject = aspects_request_content.second_subject
 
@@ -610,14 +618,16 @@ async def synastry_aspects_data(aspects_request_content: SynastryAspectsRequestM
         return InternalServerErrorJsonResponse
 
 
-@router.post("/api/v4/natal-aspects-data", response_description="Birth aspects data", response_model=SynastryAspectsResponseModel)
-async def natal_aspects_data(aspects_request_content: NatalAspectsRequestModel, request: Request) -> JSONResponse:
+async def natal_aspects_data(request: Request) -> JSONResponse:
     """
     Retrieve natal aspects and data for a specific subject. Does not include the chart.
     """
 
     write_request_to_log(20, request, f"Natal aspects data request")
 
+    # Parse JSON body
+    body = await request.json()
+    aspects_request_content = NatalAspectsRequestModel(**body)
     subject = aspects_request_content.subject
 
     try:
@@ -671,8 +681,7 @@ async def natal_aspects_data(aspects_request_content: NatalAspectsRequestModel, 
         return InternalServerErrorJsonResponse
 
 
-@router.post("/api/v4/relationship-score", response_description="Relationship score", response_model=RelationshipScoreResponseModel)
-async def relationship_score(relationship_score_request: RelationshipScoreRequestModel, request: Request) -> JSONResponse:
+async def relationship_score(request: Request) -> JSONResponse:
     """
     Calculates the relevance of the relationship between two subjects using the Ciro Discepolo method.
 
@@ -687,6 +696,9 @@ async def relationship_score(relationship_score_request: RelationshipScoreReques
     More details: https://www-cirodiscepolo-it.translate.goog/Articoli/Discepoloele.htm?_x_tr_sl=it&_x_tr_tl=en&_x_tr_hl=it&_x_tr_pto=wapp
     """
 
+    # Parse JSON body
+    body = await request.json()
+    relationship_score_request = RelationshipScoreRequestModel(**body)
     first_subject = relationship_score_request.first_subject
     second_subject = relationship_score_request.second_subject
 
@@ -765,13 +777,15 @@ async def relationship_score(relationship_score_request: RelationshipScoreReques
         return InternalServerErrorJsonResponse
 
 
-@router.post("/api/v4/composite-chart", response_description="Composite data", response_model=CompositeChartResponseModel)
-async def composite_chart(composite_chart_request: CompositeChartRequestModel, request: Request) -> JSONResponse:
+async def composite_chart(request: Request) -> JSONResponse:
     """
     Retrieve a composite chart between two subjects. Includes the data for the subjects and the aspects.
     The method used is the midpoint method.
     """
 
+    # Parse JSON body
+    body = await request.json()
+    composite_chart_request = CompositeChartRequestModel(**body)
     first_subject = composite_chart_request.first_subject
     second_subject = composite_chart_request.second_subject
 
@@ -866,12 +880,14 @@ async def composite_chart(composite_chart_request: CompositeChartRequestModel, r
         return InternalServerErrorJsonResponse
 
 
-@router.post("/api/v4/composite-aspects-data", response_description="Composite aspects data", response_model=CompositeAspectsResponseModel)
-async def composite_aspects_data(composite_chart_request: CompositeChartRequestModel, request: Request) -> JSONResponse:
+async def composite_aspects_data(request: Request) -> JSONResponse:
     """
     Retrieves the data and the aspects for a composite chart between two subjects. Does not include the chart.
     """
 
+    # Parse JSON body
+    body = await request.json()
+    composite_chart_request = CompositeChartRequestModel(**body)
     first_subject = composite_chart_request.first_subject
     second_subject = composite_chart_request.second_subject
 
@@ -957,3 +973,23 @@ async def composite_aspects_data(composite_chart_request: CompositeChartRequestM
 
         write_request_to_log(40, request, e)
         return InternalServerErrorJsonResponse
+
+
+# Define routes
+routes = [
+    Route('/api/v4/health', health, methods=['GET']),
+    Route('/', status, methods=['GET']),
+    Route('/api/v4/now', get_now, methods=['GET']),
+    Route('/api/v4/birth-data', birth_data, methods=['POST']),
+    Route('/api/v4/birth-chart', birth_chart, methods=['POST']),
+    Route('/api/v4/synastry-chart', synastry_chart, methods=['POST']),
+    Route('/api/v4/transit-chart', transit_chart, methods=['POST']),
+    Route('/api/v4/transit-aspects-data', transit_aspects_data, methods=['POST']),
+    Route('/api/v4/synastry-aspects-data', synastry_aspects_data, methods=['POST']),
+    Route('/api/v4/natal-aspects-data', natal_aspects_data, methods=['POST']),
+    Route('/api/v4/relationship-score', relationship_score, methods=['POST']),
+    Route('/api/v4/composite-chart', composite_chart, methods=['POST']),
+    Route('/api/v4/composite-aspects-data', composite_aspects_data, methods=['POST']),
+]
+
+router = Router(routes=routes)

@@ -4,7 +4,7 @@ These tests verify the open-source Geonames integration with credential manageme
 rate limiting, and PT-BR optimizations.
 """
 
-from fastapi.testclient import TestClient
+from starlette.testclient import TestClient
 from app.main import app
 import os
 

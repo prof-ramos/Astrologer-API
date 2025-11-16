@@ -5,7 +5,8 @@
 import logging
 import logging.config
 
-from fastapi import FastAPI
+from starlette.applications import Starlette
+from starlette.routing import Mount
 
 from .routers import main_router, geonames_router
 from .config.settings import settings
@@ -13,40 +14,23 @@ from .middleware.secret_key_checker_middleware import SecretKeyCheckerMiddleware
 
 
 logging.config.dictConfig(settings.LOGGING_CONFIG)
-app = FastAPI(
+
+# Create Starlette application with all routes
+routes = [
+    Mount('/', app=main_router.router),
+    Mount('/', app=geonames_router.router),
+]
+
+app = Starlette(
     debug=settings.debug,
-    docs_url=settings.docs_url,
-    redoc_url=settings.redoc_url,
-    title="Astrologer API",
-    version="4.0.0",
-    summary="Astrology Made Easy",
-    description="The Astrologer API is a RESTful service providing extensive astrology calculations, designed for seamless integration into projects. It offers a rich set of astrological charts and data, making it an invaluable tool for both developers and astrology enthusiasts.",
-    contact={
-        "name": "Kerykeion Astrology",
-        "url": "https://www.kerykeion.net/",
-        "email": settings.admin_email,
-    },
-    license_info={
-        "name": "AGPL-3.0",
-        "url": "https://www.gnu.org/licenses/agpl-3.0.html",
-    },
+    routes=routes,
 )
 
 #------------------------------------------------------------------------------
-# Routers 
+# Middleware
 #------------------------------------------------------------------------------
 
-app.include_router(main_router.router, tags=["Endpoints"])
-app.include_router(geonames_router, tags=["Geonames"])
-
-#------------------------------------------------------------------------------
-# Middleware 
-#------------------------------------------------------------------------------
-
-if settings.debug is True:
-    pass
-
-else:
+if settings.debug is not True:
     app.add_middleware(
         SecretKeyCheckerMiddleware,
         secret_key_name=settings.secret_key_name,

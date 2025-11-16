@@ -7,7 +7,7 @@ from pathlib import Path
 
 path.append(str(Path(__file__).parent.parent))
 
-from fastapi.testclient import TestClient
+from starlette.testclient import TestClient
 from app.main import app
 from datetime import datetime, timezone
 
