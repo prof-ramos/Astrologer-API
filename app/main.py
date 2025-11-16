@@ -9,7 +9,6 @@ from fastapi import FastAPI
 
 from .routers import main_router, geonames_router
 from .config.settings import settings
-from .middleware.secret_key_checker_middleware import SecretKeyCheckerMiddleware
 
 
 logging.config.dictConfig(settings.LOGGING_CONFIG)
@@ -33,24 +32,14 @@ app = FastAPI(
 )
 
 #------------------------------------------------------------------------------
-# Routers 
+# Routers
 #------------------------------------------------------------------------------
 
 app.include_router(main_router.router, tags=["Endpoints"])
 app.include_router(geonames_router, tags=["Geonames"])
 
 #------------------------------------------------------------------------------
-# Middleware 
+# Middleware
 #------------------------------------------------------------------------------
 
-if settings.debug is True:
-    pass
-
-else:
-    app.add_middleware(
-        SecretKeyCheckerMiddleware,
-        secret_key_name=settings.secret_key_name,
-        secret_keys=[
-            settings.rapid_api_secret_key,
-        ],
-    )
+# No middleware required for open-source deployment

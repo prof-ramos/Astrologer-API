@@ -12,7 +12,6 @@ from tomllib import load as load_toml
 logger = getLogger(__name__)
 
 ENV_TYPE = getenv("ENV_TYPE", False)
-RAPID_API_SECRET_KEY = getenv("RAPID_API_SECRET_KEY", False)
 GEONAMES_USERNAME = getenv("GEONAMES_USERNAME", False)
 
 # Open config file
@@ -39,7 +38,6 @@ else:
 
 class Settings(BaseSettings):
     # Environment variables
-    rapid_api_secret_key: str = getenv("RAPID_API_SECRET_KEY", "")
     geonames_username: str = getenv("GEONAMES_USERNAME", "")
     env_type: str | bool = ENV_TYPE
 
@@ -50,7 +48,6 @@ class Settings(BaseSettings):
     debug: bool = config["debug"]
     docs_url: str | None = config["docs_url"]
     redoc_url: str | None = config["redoc_url"]
-    secret_key_name: str = config["secret_key_name"]
 
     # Common settings
     log_level: int = int(config["log_level"])
